@@ -26,12 +26,15 @@ from livebench.common import (
     chat_completion_vertex,
     chat_completion_mistral,
     chat_completion_cohere,
+    chat_completion_phimoe,
     LIVE_BENCH_DATA_SUPER_PATH,
 )
 from livebench.model.model_adapter import get_conversation_template, ANTHROPIC_MODEL_LIST
 from livebench.model.model_adapter import GOOGLE_GENERATIVEAI_MODEL_LIST, VERTEX_MODEL_LIST
 from livebench.model.model_adapter import MISTRAL_MODEL_LIST
 from livebench.model.model_adapter import COHERE_MODEL_LIST
+from livebench.model.model_adapter import PHIMOE_MODEL_LIST
+
 
 
 def get_answer(
@@ -43,6 +46,7 @@ def get_answer(
     if args.force_temperature is not None:
         temperature = args.force_temperature
     elif "required_temperature" in question.keys():
+        print(f'using the required temperature: {question["required_temperature"]}')
         temperature = question["required_temperature"]
     else:
         temperature = 0.0
@@ -57,9 +61,7 @@ def get_answer(
             conv.append_message(conv.roles[0], question["turns"][j])
             conv.append_message(conv.roles[1], None)
 
-            if api_dict is not None:
-                output = chat_completion_openai(model, conv, temperature, max_tokens, api_dict=api_dict)
-            elif model in ANTHROPIC_MODEL_LIST:
+            if model in ANTHROPIC_MODEL_LIST:
                 output = chat_completion_anthropic(model, conv, temperature, max_tokens)
             elif model == "palm-2-chat-bison-001":
                 chat_state, output = chat_completion_palm(
@@ -73,6 +75,10 @@ def get_answer(
                 output = chat_completion_mistral(model, conv, temperature, max_tokens)
             elif model in COHERE_MODEL_LIST:
                 output = chat_completion_cohere(model, conv, temperature, max_tokens)
+            elif model in PHIMOE_MODEL_LIST:
+                output = chat_completion_phimoe(model, conv, temperature, max_tokens, api_dict=api_dict)
+            elif api_dict is not None:
+                output = chat_completion_openai(model, conv, temperature, max_tokens, api_dict=api_dict)
             else:
                 output = chat_completion_openai(model, conv, temperature, max_tokens)
 

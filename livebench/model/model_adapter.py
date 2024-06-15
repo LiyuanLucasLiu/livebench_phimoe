@@ -26,7 +26,7 @@ from transformers import (
 )
 
 from fastchat.constants import CPU_ISA
-from fastchat.conversation import Conversation, get_conv_template
+from fastchat.conversation import Conversation, get_conv_template, SeparatorStyle
 from fastchat.model.compression import load_compress_model
 from fastchat.model.llama_condense_monkey_patch import replace_llama_with_condense
 from fastchat.model.model_chatglm import generate_stream_chatglm
@@ -50,6 +50,10 @@ from fastchat.utils import get_gpu_memory
 # weights.  When false we treat all Peft models as separate.
 peft_share_base_weights = (
     os.environ.get("PEFT_SHARE_BASE_WEIGHTS", "false").lower() == "true"
+)
+
+PHIMOE_MODEL_LIST = (
+    "phimoe",
 )
 
 ANTHROPIC_MODEL_LIST = (
@@ -837,6 +841,22 @@ class GoogleT5Adapter(BaseModelAdapter):
         )
         return model, tokenizer
 
+class PhiMoEAdapter(BaseModelAdapter):
+    """The model adapter for PhiMoE"""
+    
+    use_fast_tokenizer = False
+    
+    def match(self, model_path: str):
+        return "phimoe" in model_path.lower()
+
+    def get_default_conv_template(self, model_path: str) -> Conversation:
+        return Conversation(
+            name="phimoe",
+            roles=("<|user|>", "<|assistant|>"),
+            sep_style=SeparatorStyle.CHATML,
+            sep="<|end|>",
+            stop_token_ids=[32000, 32007],
+        ).copy()
 
 class KoalaAdapter(BaseModelAdapter):
     """The model adapter for Koala"""
@@ -2490,6 +2510,7 @@ register_model_adapter(GemmaAdapter)
 register_model_adapter(CllmAdapter)
 register_model_adapter(CohereAdapter)
 register_model_adapter(SmaugChatAdapter)
+register_model_adapter(PhiMoEAdapter)
 
 # After all adapters, try the default base adapter.
 register_model_adapter(BaseModelAdapter)

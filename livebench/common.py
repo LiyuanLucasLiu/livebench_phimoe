@@ -9,7 +9,7 @@ from datetime import datetime
 import glob
 import json
 import os
-
+import requests
 import re
 import time
 from typing import Optional
@@ -20,6 +20,7 @@ from livebench.model.model_adapter import (
     get_conversation_template,
     ANTHROPIC_MODEL_LIST,
     OPENAI_MODEL_LIST,
+    PHIMOE_MODEL_LIST,
     GOOGLE_GENERATIVEAI_MODEL_LIST,
     VERTEX_MODEL_LIST,
 )
@@ -193,6 +194,39 @@ def make_match_single(
                 )
             )
     return matches
+
+def chat_completion_phimoe(model, conv, temperature, max_tokens, api_dict=None):
+    assert api_dict is not None
+    
+    for _ in range(API_MAX_RETRY):
+        try:
+            messages = conv.get_prompt()
+            url = api_dict['api_base']
+            data = {
+                "input_data": {
+                    "input_string": [messages],
+                    "parameters":{
+                        "max_tokens": max_tokens, 
+                        "ignore_eos": False, 
+                        "stop_token_ids": [32000, 32007],
+                        "temperature": temperature,
+                    }
+                }
+            }
+            headers = {
+                'Content-Type': 'application/json', 
+                'Authorization': api_dict['api_key'], 
+                'azureml-model-deployment': 'phi3-moe-rc3-0-8-manual-deplo-1',
+            }
+            response = requests.post(url, json=data, headers=headers)
+            response_json = response.json()
+            output = response_json[0]["0"][len(messages):]
+            break
+        except Exception as e:
+            print(type(e), e)
+            time.sleep(API_RETRY_SLEEP)
+
+    return output
 
 def chat_completion_openai(model, conv, temperature, max_tokens, api_dict=None):
     if api_dict is not None:
